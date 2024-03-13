@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Тайм-трекер</title>
+    <style>
+        body {
+            background-color: black; /* Сплошная заливка чёрным цветом */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #content {
+            max-width: 500px;
+            text-align: center;
+            padding: 20px;
+            color: white; /* Цвет текста белый для контраста */
+        }
+    </style>
+</head>
+<body>
+    <div id="content">
+        <h1>Тайм-трекер</h1>
+
+        <input type="text" id="taskInput" placeholder="Введите задачу">
+        <button id="playButton">Play</button>
+        <ul id="taskList">
+            {% for task in tasks %}
+                <li>{{ task.name }}</li>
+            {% endfor %}
+        </ul>
+        <div id="timer"></div>
+
+        {% csrf_token %}
+
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script>
+            $('#playButton').click(function() {
+                var taskName = $('#taskInput').val();
+                $.post('/start_task/', {'task_name': taskName, csrfmiddlewaretoken: '{{ csrf_token }}'}, function(data) {
+                    var taskId = data.task_id;
+                    var startTime = new Date().getTime();
+                    var timerInterval = setInterval(function() {
+                        var elapsedTime = new Date().getTime() - startTime;
+                        var minutes = Math.floor(elapsedTime / 60000);
+                        var seconds = Math.floor((elapsedTime % 60000) / 1000);
+                        $('#timer').text(minutes.toString().padStart(2, '0') + ':' + seconds.toString().padStart(2, '0'));
+                    }, 1000);
+
+                    $('#taskList').append('<li>' + taskName + '</li>').click(function() {
+                        clearInterval(timerInterval);
+                        $.post('/end_task/', {'task_id': taskId, csrfmiddlewaretoken: '{{ csrf_token }}'}, function() {
+                            $('#timer').text('');
+                            $(this).addClass('completed');
+                        });
+                    });
+                });
+            });
+        </script>
+    </div>
+</body>
+</html>
+
+
