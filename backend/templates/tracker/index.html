@@ -18,6 +18,10 @@
             padding: 20px;
             color: white; /* Цвет текста белый для контраста */
         }
+
+        .completed {
+            text-decoration: line-through; /* Зачеркнутый стиль для завершенных задач */
+        }
     </style>
 </head>
 <body>
@@ -26,6 +30,7 @@
 
         <input type="text" id="taskInput" placeholder="Введите задачу">
         <button id="playButton">Play</button>
+        <button id="stopButton" style="display: none;">Stop</button>
         <ul id="taskList">
             {% for task in tasks %}
                 <li>{{ task.name }}</li>
@@ -37,12 +42,16 @@
 
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <script>
+            var taskId = null;
+            var timerInterval = null;
+            var startTime = null; // Объявляем переменную startTime здесь
+
             $('#playButton').click(function() {
                 var taskName = $('#taskInput').val();
                 $.post('/start_task/', {'task_name': taskName, csrfmiddlewaretoken: '{{ csrf_token }}'}, function(data) {
-                    var taskId = data.task_id;
-                    var startTime = new Date().getTime();
-                    var timerInterval = setInterval(function() {
+                    taskId = data.task_id;
+                    startTime = new Date().getTime(); // Устанавливаем startTime при старте задачи
+                    timerInterval = setInterval(function() {
                         var elapsedTime = new Date().getTime() - startTime;
                         var minutes = Math.floor(elapsedTime / 60000);
                         var seconds = Math.floor((elapsedTime % 60000) / 1000);
@@ -50,17 +59,38 @@
                     }, 1000);
 
                     $('#taskList').append('<li>' + taskName + '</li>').click(function() {
-                        clearInterval(timerInterval);
+                        stopTask();
+                    });
+
+                    $('#playButton').hide();
+                    $('#stopButton').show();
+                });
+            });
+
+            function stopTask() {
+                clearInterval(timerInterval);
+                if (startTime) { // Проверяем, что startTime установлен
+                    var elapsedTime = new Date().getTime() - startTime;
+                    var minutes = Math.floor(elapsedTime / 60000);
+
+                    if (minutes < 1) {
+                        alert('Задачи длительностью менее 1 минуты не сохраняются!');
+                    } else {
                         $.post('/end_task/', {'task_id': taskId, csrfmiddlewaretoken: '{{ csrf_token }}'}, function() {
                             $('#timer').text('');
-                            $(this).addClass('completed');
+                            $('#taskList li:last-child').addClass('completed');
                         });
-                    });
-                });
+                    }
+
+                    $('#playButton').show();
+                    $('#stopButton').hide();
+                }
+            }
+
+            $('#stopButton').click(function() {
+                stopTask();
             });
         </script>
     </div>
 </body>
 </html>
-
-

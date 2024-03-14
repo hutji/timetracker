@@ -22,9 +22,19 @@ def start_task(request):
 
 @csrf_protect
 def end_task(request):
-    if request.method == "POST":
-        task_id = request.POST.get("task_id")
+    if request.method == 'POST':
+        task_id = request.POST.get('task_id')
         task = Task.objects.get(id=task_id)
-        task.end_time = datetime.datetime.now()
+        task.end_time = datetime.now()
+
+        duration = task.end_time - task.start_time
+        duration_minutes = duration.total_seconds() // 60
+
+        if duration_minutes < 1:
+            return JsonResponse({'success': False, 'duration_less_than_minute': True})
+
         task.save()
-        return JsonResponse({})
+        return JsonResponse({'success': True, 'duration': f'{int(duration_minutes // 60)} ч {int(duration_minutes % 60)} м'})
+
+    return JsonResponse({'success': False})
+
